@@ -1,0 +1,14 @@
+[project]
+name = "msm-agent"
+version = "0.1.0"
+dependencies = [
+  "numpy",
+  "pyyaml",
+  "matplotlib",
+  "msmbuilder2022",
+  "mdtraj",
+  "scipy"
+]
+
+[project.scripts]
+msm-agent = "msm_agent.cli:main"

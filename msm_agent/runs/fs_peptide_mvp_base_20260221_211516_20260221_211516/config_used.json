@@ -1,0 +1,54 @@
+{
+  "run": {
+    "output_dir": "runs",
+    "run_name": "fs_peptide_mvp_base_20260221_211516",
+    "seed": 42
+  },
+  "data": {
+    "kind": "fs_peptide",
+    "stride": 10,
+    "dt_ps_per_frame": 50,
+    "topology": null,
+    "xtc_glob": null
+  },
+  "features": {
+    "type": "dihedral",
+    "dihedral_types": [
+      "phi",
+      "psi"
+    ]
+  },
+  "preprocess": {
+    "scaler": "robust"
+  },
+  "tica": {
+    "lag_time_frames": 2,
+    "n_components": 4
+  },
+  "clustering": {
+    "method": "kmeans",
+    "n_clusters": 100
+  },
+  "msm": {
+    "lag_time_frames_list": [
+      1,
+      2,
+      5,
+      10,
+      20
+    ],
+    "n_timescales": 10,
+    "ergodic_cutoff": 0.5
+  },
+  "plots": {
+    "bins": 90,
+    "gridsize": 120
+  },
+  "gates": {
+    "min_occupancy": 10,
+    "max_tiny_state_frac": 0.3,
+    "min_avg_out_degree": 3,
+    "plateau_k": 3,
+    "plateau_rel_var": 0.3
+  }
+}

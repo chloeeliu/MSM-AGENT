@@ -1,0 +1,38 @@
+MSMBuilder Dataset:
+  MSMBuilder:	3.9.0+444aceac5834fc602fe145e6b11f23dc7f701f0a
+  Command:	/opt/anaconda3/bin/msm-agent run --config examples/fs_peptide_mvp.yaml
+  Path:		runs/fs_peptide_mvp_20260221_161006/ticas
+  Username:	chloe
+  Hostname:	Xinchis-MacBook-Pro-2.local
+  Date:		February 21, 2026 04:10 PM
+  Comments:		
+
+== Derived from ==
+MSMBuilder Dataset:
+  MSMBuilder:	3.9.0+444aceac5834fc602fe145e6b11f23dc7f701f0a
+  Command:	/opt/anaconda3/bin/msm-agent run --config examples/fs_peptide_mvp.yaml
+  Path:		runs/fs_peptide_mvp_20260221_161006/scaled_diheds
+  Username:	chloe
+  Hostname:	Xinchis-MacBook-Pro-2.local
+  Date:		February 21, 2026 04:10 PM
+  Comments:		
+
+== Derived from ==
+MSMBuilder Dataset:
+  MSMBuilder:	3.9.0+444aceac5834fc602fe145e6b11f23dc7f701f0a
+  Command:	/opt/anaconda3/bin/msm-agent run --config examples/fs_peptide_mvp.yaml
+  Path:		runs/fs_peptide_mvp_20260221_161006/diheds
+  Username:	chloe
+  Hostname:	Xinchis-MacBook-Pro-2.local
+  Date:		February 21, 2026 04:10 PM
+  Comments:		
+
+== Derived from ==
+MDTraj dataset:
+  path:		/Users/chloe/msmbuilder_data/fs_peptide/*.xtc
+  topology:	/Users/chloe/msmbuilder_data/fs_peptide/fs-peptide.pdb
+  stride:	10
+  atom_indices	None
+
+
+

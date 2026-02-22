@@ -1,0 +1,16 @@
+MSMBuilder Dataset:
+  MSMBuilder:	3.9.0+444aceac5834fc602fe145e6b11f23dc7f701f0a
+  Command:	app_gradio.py
+  Path:		runs/fs_peptide_mvp_base_20260221_213515_20260221_213515/diheds
+  Username:	chloe
+  Hostname:	Xinchis-MacBook-Pro-2.local
+  Date:		February 21, 2026 09:35 PM
+  Comments:		
+
+== Derived from ==
+MDTraj dataset:
+  path:		/Users/chloe/msmbuilder_data/fs_peptide/*.xtc
+  topology:	/Users/chloe/msmbuilder_data/fs_peptide/fs-peptide.pdb
+  stride:	10
+  atom_indices	None
+

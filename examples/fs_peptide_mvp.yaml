@@ -1,0 +1,42 @@
+run:
+  output_dir: "runs"
+  run_name: "fs_peptide_mvp"
+  seed: 42
+
+data:
+  kind: "fs_peptide"          # "fs_peptide" or "xtc_glob"
+  stride: 10
+  dt_ps_per_frame: 50         # original saved timestep in ps/frame (FsPeptide example)
+  topology: null              # used if kind=xtc_glob
+  xtc_glob: null              # used if kind=xtc_glob
+
+features:
+  type: "dihedral"
+  dihedral_types: ["phi", "psi"]
+
+preprocess:
+  scaler: "robust"            # "robust" only in MVP
+
+tica:
+  lag_time_frames: 2
+  n_components: 4
+
+clustering:
+  method: "kmeans"
+  n_clusters: 100
+
+msm:
+  lag_time_frames_list: [1, 2, 5, 10, 20]
+  n_timescales: 10
+  ergodic_cutoff: 0.5
+
+plots:
+  bins: 90
+  gridsize: 120
+
+gates:
+  min_occupancy: 10           # microstate with fewer than this is "tiny"
+  max_tiny_state_frac: 0.30   # if >30% are tiny => WARN
+  min_avg_out_degree: 3       # if avg out edges <3 => FAIL-ish
+  plateau_k: 3                # check top-k implied timescales
+  plateau_rel_var: 0.30       # <=30% relative variation across lags => plateau
