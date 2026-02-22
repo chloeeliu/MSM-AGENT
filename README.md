@@ -5,7 +5,7 @@ An interactive human-in-the-loop pipeline for iterative chemistry experiment exp
 The system combines automated parameter sweeps, structured result summarization, and LLM-assisted planning to guide experiment refinement over multiple cycles.
 
 # Overview
-
+```
 User → Base Config
         ↓
 Config Generator / Runner
@@ -20,7 +20,7 @@ User Feedback / Edits
         ↓
 Next Batch Execution
         ↺ (loop)
-
+```
 
 # Setup
 
