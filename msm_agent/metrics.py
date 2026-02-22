@@ -1,5 +1,6 @@
 from __future__ import annotations
 import numpy as np
+from msmbuilder.decomposition import tICA
 from msmbuilder.msm import MarkovStateModel
 
 def compute_occupancy_stats(assign_1d: np.ndarray, n_clusters: int) -> dict:
@@ -36,18 +37,25 @@ def compute_transition_sparsity(clustered_trajs, n_states: int) -> dict:
         "p10_out_degree": float(np.percentile(out_degrees, 10)),
     }
 
-def compute_its_table(clustered_trajs, lag_list, n_timescales: int, ergodic_cutoff: float, dt_ns: float) -> dict:
+def compute_tica_its(features, lag_list, n_components: int, dt_ns: float) -> dict:
     # returns per-lag implied timescales in ns
     table = {}
     for lag in lag_list:
-        msm = MarkovStateModel(lag_time=int(lag), n_timescales=int(n_timescales), ergodic_cutoff=float(ergodic_cutoff))
+        tica = tICA(lag_time=lag, n_components=int(n_components))
+        tica.fit(features)
+        ts = np.asarray(tica.timescales_, dtype=float) # [1, n_components]
+        table[str(lag*dt_ns)] = ts * dt_ns.tolist()
+    return table 
+
+def compute_msm_its(clustered_trajs, lag_list, n_timescales: int, reversible_type: str, ergodic_cutoff: float, dt_ns: float) -> dict:
+    # returns per-lag implied timescales in ns
+    table = {}
+    for lag in lag_list:
+        msm = MarkovStateModel(lag_time=int(lag), n_timescales=int(n_timescales), reversible_type=reversible_type, ergodic_cutoff=float(ergodic_cutoff))
         msm.fit(clustered_trajs)
         ts = np.asarray(msm.timescales_, dtype=float)
-        # MSMBuilder timescales are in "frames"; convert to ns using dt_ns
-        # (If you later confirm different units, you can adjust in one place.)
-        ts_ns = ts * dt_ns
-        table[str(lag)] = ts_ns.tolist()
-    return {"lag_frames": [int(x) for x in lag_list], "timescales_ns": table}
+        table[str(lag*dt_ns)] = ts * dt_ns.tolist()
+    return table
 
 def plateau_metric(its: dict, top_k: int) -> dict:
     lags = its["lag_frames"]
