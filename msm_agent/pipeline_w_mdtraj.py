@@ -13,11 +13,12 @@ from msmbuilder.msm import MarkovStateModel
 from msmbuilder.lumping import PCCAPlus
 
 from msm_agent.metrics import (
+    ck_test,
     compute_occupancy_stats,
     compute_tica_its,
     compute_transition_sparsity,
     compute_msm_its,
-    plateau_metric,
+    its_plateau_metric,
     grade_run,
     suggest_fixes,
 )
@@ -144,6 +145,7 @@ def run_mvp(cfg: dict) -> str:
     dt_ns = dt_ps_effective / 1000.0  # ps -> ns
     n_trajs = len(features)
     traj_lens = [len(x) for x in features]
+    # check features
 
     # --- tICA
     tica_cfg = cfg["tica"]
@@ -186,7 +188,7 @@ def run_mvp(cfg: dict) -> str:
         min_occupancy=int(cfg["gates"]["min_occupancy"]),
     )
     
-    # interaction: show occupancy/transition sparsity and ask user to change number of clusters or proceed, if proceed
+    # interaction: show occupancy and ask user to change number of clusters or proceed, if proceed
     _save_intermediate(clustered_trajs, run_dir / "clustered_trajs")
 
     # --- microstate MSM and its
@@ -206,18 +208,28 @@ def run_mvp(cfg: dict) -> str:
         outpath=run_dir / "figs" / "microstateMSM_its_curve.png",
         top_k=int(cfg["gates"]["plateau_k"]),
     )
-    sparsity = compute_transition_sparsity(clustered_trajs, n_states=len(msm.state_labels_), lagtime=lag_list)
+    sparsity = compute_transition_sparsity(clustered_trajs, n_states = len(msm.state_labels_), lagtimes=lag_list) # list of sparsity dict 
+    # raise warning if disconnected > 0
+    for s in sparsity:
+        if s["disconnected"] > 0:
+            print(f"Warning: {s['disconnected']} disconnected states found at lagtime {s['lagtime']} frames")
 
-    # interacton: show microstate MSM its and sparsity, and ask user to decide lagtime to proceed
+    its_plateau = its_plateau_metric(its, top_k=int(cfg["gates"]["plateau_k"]), last_step=int(cfg["gates"]["plateau_last_step"]))
+    # raise warning if not plateaued
+    for i, p in enumerate(its_plateau["plateaued"]):
+        if not p:
+            print(f"Warning: ITS not plateaued for top {i+1} timescales")
+    # interacton: show microstate MSM its and sparsity check, and ask user to decide lagtime to proceed
 
     # choose a "primary" MSM (use median lag or smallest passing lag; MVP picks lag_list[1] if exists)
     #primary_lag = lag_list[1] if len(lag_list) > 1 else lag_list[0]
     msm = MarkovStateModel(
         lag_time=int(lag_list[1]),
         n_timescales=int(msm_cfg["n_timescales"]),
+        reversible_type=msm_cfg["reversible_type"],
         ergodic_cutoff=float(msm_cfg["ergodic_cutoff"]),
     ).fit(clustered_trajs)
-
+    ck_results = ck_test(msm, clustered_trajs, num_states=4, out_dir=run_dir / "figs", plot_only=False)
     # transition sparsity on primary MSM: approximate from counts if available; fallback: from assignments sequence
 
 
