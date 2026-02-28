@@ -7,7 +7,8 @@ from sklearn.preprocessing import RobustScaler
 import mdtraj as md
 
 from msmbuilder.decomposition import tICA
-from msmbuilder.cluster import MiniBatchKMeans
+#from msmbuilder.cluster import MiniBatchKMeans
+import msmbuilder.cluster as cluster_module
 from msmbuilder.msm import MarkovStateModel
 from msmbuilder.lumping import PCCAPlus
 
@@ -120,6 +121,12 @@ def _load_feature(cfg: dict, run_dir: Path):
     dt_ps = float(cfg["data"]["saving_interval"]) * stride
     return loaded_features, dt_ps
 
+def _find_clusterer(random_state, cl_cfg):
+    method = cl_cfg["method"]
+    assert method in ["KCenters","KMeans","KMedoids","MiniBatchKMedoids","MiniBatchKMeans"], \
+        f"Unsupported clustering method: {method}. Supported: KCenters, KMeans, KMedoids, MiniBatchKMedoids, MiniBatchKMeans"
+    return getattr(cluster_module, method)(n_clusters=int(cl_cfg["n_clusters"]), random_state=random_state, **{k: cl_cfg[k] for k in cl_cfg if k not in ["method", "n_clusters"]})
+
 def _save_intermediate(data, out_path: Path):
     out_path.mkdir(exist_ok=True)
     feature_dir = out_path.parent / "features"
@@ -142,14 +149,15 @@ def run_mvp(cfg: dict) -> str:
     tica_cfg = cfg["tica"]
     tica_lag_list = np.linspace(int(tica_cfg["lag_time_frames_range"][0]),int(tica_cfg["lag_time_frames_range"][1]),num=20, dtype=int)
     tica_its = compute_tica_its(features, tica_lag_list, n_components=int(tica_cfg["n_components"]), dt_ns=dt_ns)
-    # visualize tICA ITS curve to choose lag time for clustering, not implemented afterwards
+    # dict[lagtime, its_list]; lagtime in ns, its_list in ns
     plot_its_curve(
         tica_its,
         outpath=run_dir / "figs" / "tica_its_curve.png",
         top_k=int(cfg["gates"]["plateau_k"]),
     )
 
-    tica_model = tICA(lag_time=int(tica_cfg["lag_time_frames"]), n_components=int(tica_cfg["n_components"]))
+    # interaction: show its curve and ask user to choose lag time and n_conponent for tICA; for now, just pick the first lag time
+    tica_model = tICA(lag_time=tica_lag_list[0], n_components=int(tica_cfg["n_components"]))
     tics = tica_model.fit_transform(features)
     _save_intermediate(tics, run_dir / "tica_trajs")
    
@@ -161,13 +169,14 @@ def run_mvp(cfg: dict) -> str:
         gridsize=int(cfg["plots"]["gridsize"]),
     )
 
+    # interaction: show tic density and ask user to choose number of clusters
     # --- clustering
     cl_cfg = cfg["clustering"]
-    clusterer = MiniBatchKMeans(n_clusters=int(cl_cfg["n_clusters"]), random_state=int(cfg["run"]["seed"]))
+    clusterer = _find_clusterer(random_state=int(cfg["run"]["seed"]), cl_cfg=cl_cfg)
+    #clusterer = MiniBatchKMeans(n_clusters=int(cl_cfg["n_clusters"]), random_state=int(cfg["run"]["seed"]))
     clustered_trajs = clusterer.fit_transform(tics)
-    _save_intermediate(clustered_trajs, run_dir / "clustered_trajs")
 
-    # occupancy & sparsity checks need "assignments" in 1D
+    # plots: occupancy & sparsity checks need "assignments" in 1D
     micro_assign = np.concatenate([np.asarray(t).reshape(-1) for t in clustered_trajs])
 
     occ_stats = compute_occupancy_stats(micro_assign, n_clusters=int(cl_cfg["n_clusters"]))
@@ -176,11 +185,14 @@ def run_mvp(cfg: dict) -> str:
         outpath=run_dir / "figs" / "occupancy_hist.png",
         min_occupancy=int(cfg["gates"]["min_occupancy"]),
     )
+    
+    # interaction: show occupancy/transition sparsity and ask user to change number of clusters or proceed, if proceed
+    _save_intermediate(clustered_trajs, run_dir / "clustered_trajs")
 
-    # --- MSM fits across lag list (for ITS)
+    # --- microstate MSM and its
     msm_cfg = cfg["msm"]
-    lag_list = [int(x) for x in msm_cfg["lag_time_frames_list"]]
-    its = compute_its_table(
+    lag_list = np.linspace(int(msm_cfg["lag_time_frames_range"][0]),int(msm_cfg["lag_time_frames_range"][1]),num=20, dtype=int)
+    its = compute_msm_its(
         clustered_trajs=clustered_trajs,
         lag_list=lag_list,
         n_timescales=int(msm_cfg["n_timescales"]),
@@ -191,20 +203,23 @@ def run_mvp(cfg: dict) -> str:
 
     plot_its_curve(
         its,
-        outpath=run_dir / "figs" / "its_curve.png",
+        outpath=run_dir / "figs" / "microstateMSM_its_curve.png",
         top_k=int(cfg["gates"]["plateau_k"]),
     )
+    sparsity = compute_transition_sparsity(clustered_trajs, n_states=len(msm.state_labels_), lagtime=lag_list)
+
+    # interacton: show microstate MSM its and sparsity, and ask user to decide lagtime to proceed
 
     # choose a "primary" MSM (use median lag or smallest passing lag; MVP picks lag_list[1] if exists)
-    primary_lag = lag_list[1] if len(lag_list) > 1 else lag_list[0]
+    #primary_lag = lag_list[1] if len(lag_list) > 1 else lag_list[0]
     msm = MarkovStateModel(
-        lag_time=int(primary_lag),
+        lag_time=int(lag_list[1]),
         n_timescales=int(msm_cfg["n_timescales"]),
         ergodic_cutoff=float(msm_cfg["ergodic_cutoff"]),
     ).fit(clustered_trajs)
 
     # transition sparsity on primary MSM: approximate from counts if available; fallback: from assignments sequence
-    sparsity = compute_transition_sparsity(clustered_trajs, n_states=len(msm.state_labels_))
+
 
     # free energy weighted by stationary populations
     # map each frame’s microstate to its population weight

@@ -71,7 +71,7 @@ def init_default_config() -> str:
         "features": {"type": "distance", "selection": "distances", "atom_selection": "heavy"},
         "tica": {"lag_time_frames_range": [2, 100], "n_components": 4},
         "clustering": {"method": "kmeans", "n_clusters": 100},
-        "msm": {"lag_time_frames_list": [1, 2, 5, 10, 20], "n_timescales": 10, "reversible_type": "mle", "ergodic_cutoff": False},
+        "msm": {"lag_time_frames_range": [2, 100], "n_timescales": 10, "reversible_type": "mle", "ergodic_cutoff": False},
         "plots": {"bins": 90, "gridsize": 120},
         "gates": {"min_occupancy": 10, "max_tiny_state_frac": 0.30, "min_avg_out_degree": 3, "plateau_k": 3, "plateau_rel_var": 0.30},
     })
@@ -241,7 +241,7 @@ class GoogleAdvisor:
         return resp.text
 
 #ADVISOR = OpenAIAdvisor(model="gpt-5.2")
-ADVISOR = GoogleAdvisor(model="gemini-pro")
+ADVISOR = GoogleAdvisor(model="gemini-2.5-flash")
 
 
 # ----------------------------

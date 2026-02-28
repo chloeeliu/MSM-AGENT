@@ -17,15 +17,17 @@ def compute_occupancy_stats(assign_1d: np.ndarray, n_clusters: int) -> dict:
         "occupancy_p90": float(np.percentile(occ, 90)),
     }
 
-def compute_transition_sparsity(clustered_trajs, n_states: int) -> dict:
+def compute_transition_sparsity(clustered_trajs, n_states: int, lagtimes: list) -> dict:
+    # go throgh all lagtimes in list and calculate the sparsity
     # quick proxy: count unique outgoing transitions from each state using adjacent frames
+    lagtime = lagtimes[0]
     out_sets = [set() for _ in range(n_states)]
     total_edges = 0
     for traj in clustered_trajs:
         a = np.asarray(traj).reshape(-1)
-        for i in range(len(a) - 1):
+        for i in range(len(a) - lagtime):
             s = int(a[i])
-            t = int(a[i+1])
+            t = int(a[i+lagtime])
             if s < n_states and t < n_states:
                 out_sets[s].add(t)
     out_degrees = np.array([len(s) for s in out_sets], dtype=float)
