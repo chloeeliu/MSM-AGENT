@@ -43,15 +43,14 @@ def plot_occupancy_hist(occupancies, outpath, min_occupancy=10):
     plt.close()
 
 def plot_its_curve(its: dict, outpath, top_k: int = 3):
-    lags = its["lag_frames"]
-    plt.figure()
-    for i in range(top_k):
-        y = []
-        for lag in lags:
-            ts = np.asarray(its["timescales_ns"][str(lag)], dtype=float)
-            y.append(ts[i] if len(ts) > i else np.nan)
-        plt.plot(lags, y, marker="o", label=f"t_{i+1}")
-    plt.xlabel("MSM lag time (frames)")
+    lags = []
+    timescales = []
+    for key, value in its.items():
+        lags.append(int(key))
+        timescales.append(np.asarray(value[:top_k], dtype=float))
+    plt.figure(figsize=(12,8))
+    plt.semilogy(lags, timescales, marker="o")
+    plt.xlabel("Lag time (ns)")
     plt.ylabel("Implied timescales (ns)")
     plt.legend()
     plt.tight_layout()
