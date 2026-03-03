@@ -69,7 +69,7 @@ def _find_featurizer(frame, feature_selection, atom_selection):
 
 def _transform_data(featurizer, traj):
     if isinstance(featurizer, list):
-        features = [f(traj) for f in featurizer]
+        features = [f(traj)[1] for f in featurizer]
         return np.concatenate(features, axis=1)
     else:
         return featurizer(traj)
