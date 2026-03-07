@@ -1,13 +1,16 @@
-from __future__ import annotations
 from pathlib import Path
+import os
+import glob
 import json
 import time
+import itertools
+from functools import partial
+
 import numpy as np
-from sklearn.preprocessing import RobustScaler
 import mdtraj as md
+from sklearn.preprocessing import RobustScaler
 
 from msmbuilder.decomposition import tICA
-#from msmbuilder.cluster import MiniBatchKMeans
 import msmbuilder.cluster as cluster_module
 from msmbuilder.msm import MarkovStateModel
 from msmbuilder.lumping import PCCAPlus
@@ -22,6 +25,7 @@ from msm_agent.metrics import (
     grade_run,
     suggest_fixes,
 )
+
 from msm_agent.plots import (
     plot_tica_density_hexbin,
     plot_free_energy,
@@ -29,9 +33,11 @@ from msm_agent.plots import (
     plot_its_curve,
     plot_macro_overlay,
 )
+
 from msm_agent.report import write_report
-import glob, os, itertools
-from functools import partial
+
+
+
 
 
 def _make_run_dir(cfg: dict) -> Path:
@@ -140,14 +146,14 @@ def run_mvp(cfg: dict) -> str:
     run_dir = _make_run_dir(cfg)
     (run_dir / "figs").mkdir(exist_ok=True)
 
-    # --- load data and featurize
+    # Stage1 Featurization --- load data and featurize
     features, dt_ps_effective = _load_feature(cfg, run_dir)
     dt_ns = dt_ps_effective / 1000.0  # ps -> ns
     n_trajs = len(features)
     traj_lens = [len(x) for x in features]
     # check features
 
-    # --- tICA
+    # Stage 2 model selection to determine lag_time --- tICA
     tica_cfg = cfg["tica"]
     tica_lag_list = np.linspace(int(tica_cfg["lag_time_frames_range"][0]),int(tica_cfg["lag_time_frames_range"][1]),num=20, dtype=int)
     tica_its = compute_tica_its(features, tica_lag_list, n_components=int(tica_cfg["n_components"]), dt_ns=dt_ns)
@@ -159,6 +165,8 @@ def run_mvp(cfg: dict) -> str:
     )
 
     # interaction: show its curve and ask user to choose lag time and n_conponent for tICA; for now, just pick the first lag time
+
+    # Stage 3 final tICA fit + visualization
     tica_model = tICA(lag_time=tica_lag_list[0], n_components=int(tica_cfg["n_components"]))
     tics = tica_model.fit_transform(features)
     _save_intermediate(tics, run_dir / "tica_trajs")
@@ -172,7 +180,8 @@ def run_mvp(cfg: dict) -> str:
     )
 
     # interaction: show tic density and ask user to choose number of clusters
-    # --- clustering
+
+    # Stage 4 --- clustering
     cl_cfg = cfg["clustering"]
     clusterer = _find_clusterer(random_state=int(cfg["run"]["seed"]), cl_cfg=cl_cfg)
     #clusterer = MiniBatchKMeans(n_clusters=int(cl_cfg["n_clusters"]), random_state=int(cfg["run"]["seed"]))
@@ -191,7 +200,7 @@ def run_mvp(cfg: dict) -> str:
     # interaction: show occupancy and ask user to change number of clusters or proceed, if proceed
     _save_intermediate(clustered_trajs, run_dir / "clustered_trajs")
 
-    # --- microstate MSM and its
+    # Stage 5 --- microstate MSM and its
     msm_cfg = cfg["msm"]
     lag_list = np.linspace(int(msm_cfg["lag_time_frames_range"][0]),int(msm_cfg["lag_time_frames_range"][1]),num=20, dtype=int)
     its = compute_msm_its(
@@ -208,7 +217,9 @@ def run_mvp(cfg: dict) -> str:
         outpath=run_dir / "figs" / "microstateMSM_its_curve.png",
         top_k=int(cfg["gates"]["plateau_k"]),
     )
+    #Note(Chloe): Move after msm exists? Todo: n_states = config.#of clusters
     sparsity = compute_transition_sparsity(clustered_trajs, n_states = len(msm.state_labels_), lagtimes=lag_list) # list of sparsity dict 
+    
     # raise warning if disconnected > 0
     for s in sparsity:
         if s["disconnected"] > 0:
@@ -221,10 +232,12 @@ def run_mvp(cfg: dict) -> str:
             print(f"Warning: ITS not plateaued for top {i+1} timescales")
     # interacton: show microstate MSM its and sparsity check, and ask user to decide lagtime to proceed
 
-    # choose a "primary" MSM (use median lag or smallest passing lag; MVP picks lag_list[1] if exists)
-    #primary_lag = lag_list[1] if len(lag_list) > 1 else lag_list[0]
+    # Stage 6 - choose a "primary" MSM (use median lag or smallest passing lag; MVP picks lag_list[1] if exists)
+
+    #Note(Chloe): why comment out primary_lag? todo: config.selected_lag_time
+    primary_lag = lag_list[1] if len(lag_list) > 1 else lag_list[0]  
     msm = MarkovStateModel(
-        lag_time=int(lag_list[1]),
+        lag_time=int(primary_lag), #lag_time=int(lag_list[1]),Question
         n_timescales=int(msm_cfg["n_timescales"]),
         reversible_type=msm_cfg["reversible_type"],
         ergodic_cutoff=float(msm_cfg["ergodic_cutoff"]),
@@ -262,7 +275,7 @@ def run_mvp(cfg: dict) -> str:
         pass
 
     # --- gates
-    plat = plateau_metric(its, top_k=int(cfg["gates"]["plateau_k"]))
+    plat = its_plateau_metric(its, top_k=int(cfg["gates"]["plateau_k"])) #Note(Chloe): plateau_metric or its_plateau_metric?
     grade = grade_run(cfg, occ_stats, sparsity, plat)
     suggestions = suggest_fixes(cfg, occ_stats, sparsity, plat)
 

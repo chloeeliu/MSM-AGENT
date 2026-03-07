@@ -54,7 +54,8 @@ def compute_tica_its(features, lag_list, n_components: int, dt_ns: float) -> dic
         tica = tICA(lag_time=lag, n_components=int(n_components))
         tica.fit(features)
         ts = np.asarray(tica.timescales_, dtype=float) # [1, n_components]
-        table[str(lag*dt_ns)] = ts * dt_ns.tolist()
+        table[str(lag*dt_ns)] = (ts * dt_ns).tolist()
+        #table[str(int(lag))] = (ts * dt_ns).tolist()
     return table 
 
 def compute_msm_its(clustered_trajs, lag_list, n_timescales: int, reversible_type: str, ergodic_cutoff: float, dt_ns: float) -> dict:
@@ -64,7 +65,8 @@ def compute_msm_its(clustered_trajs, lag_list, n_timescales: int, reversible_typ
         msm = MarkovStateModel(lag_time=int(lag), n_timescales=int(n_timescales), reversible_type=reversible_type, ergodic_cutoff=float(ergodic_cutoff))
         msm.fit(clustered_trajs)
         ts = np.asarray(msm.timescales_, dtype=float)
-        table[str(lag*dt_ns)] = ts * dt_ns.tolist()
+        table[str(lag*dt_ns)] = (ts * dt_ns).tolist()
+        #table[str(int(lag))] = (ts * dt_ns).tolist()
     return table
 
 def its_plateau_metric(its: dict, top_k: int, threshold: float = 0.1, last_step: int = 4) -> dict:

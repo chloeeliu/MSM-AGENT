@@ -1,7 +1,7 @@
 import argparse
 from pathlib import Path
 from msm_agent.config import load_config
-from msm_agent.pipeline import run_mvp
+from msm_agent.msm_agent.backup.pipeline import run_mvp
 
 def main():
     p = argparse.ArgumentParser()

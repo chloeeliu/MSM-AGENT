@@ -46,7 +46,7 @@ def plot_its_curve(its: dict, outpath, top_k: int = 3):
     lags = []
     timescales = []
     for key, value in its.items():
-        lags.append(int(key))
+        lags.append(float(key))
         timescales.append(np.asarray(value[:top_k], dtype=float))
     plt.figure(figsize=(12,8))
     plt.semilogy(lags, timescales, marker="o")
