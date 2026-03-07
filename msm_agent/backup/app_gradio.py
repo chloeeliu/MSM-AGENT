@@ -12,7 +12,7 @@ import gradio as gr
 import yaml
 from openai import OpenAI
 
-from msm_agent.pipeline import run_mvp
+from msm_agent.msm_agent.backup.pipeline import run_mvp
 
 
 # ----------------------------
