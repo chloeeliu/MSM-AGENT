@@ -14,6 +14,7 @@ features:
   type: "dihedral"
   dihedral_types: ["phi", "psi"]
 
+
 preprocess:
   scaler: "robust"            # "robust" only in MVP
 
@@ -26,9 +27,9 @@ clustering:
   n_clusters: 100
 
 msm:
-  lag_time_frames_list: [1, 2, 5, 10, 20]
+  lag_time_frames_list: [1, 2, 5, 10, 20] # iteration on this
   n_timescales: 10
-  ergodic_cutoff: 0.5
+  ergodic_cutoff: 0.5 #close population<0.5 drop this state
 
 plots:
   bins: 90

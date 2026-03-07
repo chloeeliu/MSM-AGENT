@@ -1,0 +1,42 @@
+run:
+  output_dir: "runs"
+  run_name: "ala2_stages"
+  seed: 42
+
+data:
+  kind: "xtc"
+  dir: "/Users/chloe/Desktop/project/msm/msm_agent/msm_agent/ala2_test_data"
+  topology: "/Users/chloe/Desktop/project/msm/msm_agent/msm_agent/ala2_test_data/ala2.pdb"
+
+  # saving interval of the raw saved trajectory, in ps/frame.
+  # Your filenames suggest 1ps. If that's true, keep 1.0.
+  saving_interval: 1.0
+
+  # mdtraj stride when loading; effective dt = saving_interval * stride
+  stride: 1
+
+  # optional: if you already computed features elsewhere and saved as .npy with same stems
+  load_preprocessed_dir: null
+
+features:
+  # Must match stages.py: "angle" or "distance"
+  type: "angle"
+
+  # Must match stages.py: list for angle features
+  selection: ["phi", "psi"]
+
+  # Optional: CA/BACKBONE/HEAVY or mdtraj selection string
+  atom_selection: "BACKBONE"
+
+tica:
+  # stages.py uses lag_time_frames_range for sweep + n_components
+  lag_time_frames_range: [1, 50]
+  n_components: 4
+
+plots:
+  gridsize: 120
+
+gates:
+  plateau_k: 3
+  # (not required by stages.py, but often used later)
+  min_occupancy: 10
