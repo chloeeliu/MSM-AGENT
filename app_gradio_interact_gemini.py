@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import gradio as gr
 import yaml
 from openai import OpenAI
+import os
 
 # ===== Adjust imports to your real project layout =====
 from msm_agent.stage import (
@@ -18,7 +19,7 @@ from msm_agent.stage import (
     run_stage4_cluster,
     run_stage5_msm_scan,
     run_stage6_msm_fit,
-    run_stage7_lumpeval 
+    run_stage7_lumpeval,
 )
 
 
@@ -57,7 +58,7 @@ def get_nested_key(cfg: Dict[str, Any], path: str) -> Any:
 
 
 def init_default_config() -> str:
-    example_path = Path("examples/interactive_pipeline.yaml")
+    example_path = Path("examples/ala2_mvp.yaml")
     if example_path.exists():
         return example_path.read_text()
 
@@ -131,8 +132,11 @@ class SessionState:
 # ----------------------------
 # LLM agent
 # ----------------------------
-CLIENT = OpenAI()
-MODEL = "gpt-5.2"
+CLIENT = OpenAI(
+    api_key=os.getenv("GOOGLE_API_KEY"),
+    base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
+)
+MODEL = "gemini-2.5-flash"
 
 SYSTEM_PROMPT = """You are an MSM pipeline agent for a multi-stage MD workflow.
 
@@ -159,117 +163,139 @@ Important rules:
 TOOLS = [
     {
         "type": "function",
-        "name": "get_current_status",
-        "description": "Get current workflow status, current stage, current run_dir, latest summary, and latest plot path.",
-        "parameters": {
-            "type": "object",
-            "properties": {},
-            "required": [],
-            "additionalProperties": False,
-        },
-    },
-    {
-        "type": "function",
-        "name": "get_current_config",
-        "description": "Get the current config object.",
-        "parameters": {
-            "type": "object",
-            "properties": {},
-            "required": [],
-            "additionalProperties": False,
-        },
-    },
-    {
-        "type": "function",
-        "name": "update_config_value",
-        "description": "Update one config field by dotted path. value_yaml can be a scalar, list, dict, string, etc.",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "path": {"type": "string"},
-                "value_yaml": {"type": "string"},
+        "function": {
+            "name": "get_current_status",
+            "description": "Get current workflow status, current stage, current run_dir, latest summary, and latest plot path.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": False,
             },
-            "required": ["path", "value_yaml"],
-            "additionalProperties": False,
+        }
+        
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_current_config",
+            "description": "Get the current config object.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": False,
+            },
+        }
+        
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "update_config_value",
+            "description": "Update one config field by dotted path. value_yaml can be a scalar, list, dict, string, etc.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "path": {"type": "string"},
+                    "value_yaml": {"type": "string"},
+                },
+                "required": ["path", "value_yaml"],
+                "additionalProperties": False,
+            },
         },
     },
     {
         "type": "function",
-        "name": "run_stage1_featurization",
-        "description": "Run Stage 1: load data and featurize.",
-        "parameters": {
-            "type": "object",
-            "properties": {},
-            "required": [],
-            "additionalProperties": False,
+        "function": {
+            "name": "run_stage1",
+            "description": "Run Stage 1: load data and featurize.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": False,
+            },
         },
     },
     {
         "type": "function",
-        "name": "run_stage2_tica_scan",
-        "description": "Run Stage 2: tICA lag scan using the latest Stage 1 result in current_run_dir.",
-        "parameters": {
-            "type": "object",
-            "properties": {},
-            "required": [],
-            "additionalProperties": False,
+        "function": {
+            "name": "run_stage2",
+            "description": "Run Stage 2: tICA lag scan using the latest Stage 1 result in current_run_dir.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": False,
+            },
         },
     },
     {
         "type": "function",
-        "name": "run_stage3_tica_fit",
-        "description": "Run Stage 3: final tICA fit using current_run_dir and current config.",
-        "parameters": {
-            "type": "object",
-            "properties": {},
-            "required": [],
-            "additionalProperties": False,
+        "function": {
+            "name": "run_stage3",
+            "description": "Run Stage 3: final tICA fit using current_run_dir and current config.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": False,
+            },
         },
     },
     {
         "type": "function",
-        "name": "run_stage4_cluster",
-        "description": "Run Stage 4: clustering using current_run_dir and current config.",
-        "parameters": {
-            "type": "object",
-            "properties": {},
-            "required": [],
-            "additionalProperties": False,
+        "function": {
+            "name": "run_stage4",
+            "description": "Run Stage 4: clustering using current_run_dir and current config.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": False,
+            },
         },
     },
     {
         "type": "function",
-        "name": "run_stage5_msm_scan",
-        "description": "Run Stage 5: MSM scan using current_run_dir and current config.",
-        "parameters": {
-            "type": "object",
-            "properties": {},
-            "required": [],
-            "additionalProperties": False,
+        "function": {
+            "name": "run_stage5",
+            "description": "Run Stage 5: MSM scan using current_run_dir and current config.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": False,
+            },
         },
     },
     {
         "type": "function",
-        "name": "run_stage6_msm_fit",
-        "description": "Run Stage 6: MSM fit using current_run_dir and current config.",
-        "parameters": {
-            "type": "object",
-            "properties": {},
-            "required": [],
-            "additionalProperties": False,
+        "function": {
+            "name": "run_stage6",
+            "description": "Run Stage 6: MSM fit using current_run_dir and current config.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": False,
+            },
         },
     },
     {
         "type": "function",
-        "name": "run_stage7_lumpeval",
-        "description": "Run Stage 7: lumping evaluation using current_run_dir and current config.",
-        "parameters": {
-            "type": "object",
-            "properties": {},
-            "required": [],
-            "additionalProperties": False,
+        "function": {
+            "name": "run_stage7",
+            "description": "Run Stage 7: lumping evaluation using current_run_dir and current config.",
+            "parameters": {
+                "type": "object",
+                "properties": {},
+                "required": [],
+                "additionalProperties": False,
+            },
         },
-    },
+    }
 ]
 
 
@@ -300,6 +326,8 @@ def tool_update_config_value(st: SessionState, path: str, value_yaml: str) -> Di
         "updated_path": path,
         "new_value": value,
     }
+
+
 
 def tool_run_stage(st: SessionState, stage: int) -> Dict[str, Any]:
     if st.current_cfg_obj is None:
@@ -399,7 +427,7 @@ def to_llm_messages(chat_history: List[Dict[str, Any]]) -> List[Dict[str, str]]:
     msgs = []
     for m in chat_history or []:
         role = str(m.get("role", "user"))
-        if role not in {"system", "user", "assistant", "developer"}:
+        if role not in {"system", "user", "assistant", "tool"}:
             continue
 
         text = normalize_chat_content(m.get("content", ""))
@@ -443,28 +471,24 @@ def run_agent_once(
 
     # 3) Build LLM inputs
     context_text = (
-    f"Current stage: {st.current_stage}\n"
-    f"Current run_dir: {st.current_run_dir}\n"
-    f"Latest summary:\n{st.latest_summary or 'None'}\n"
-    f"Latest plot path: {st.latest_plot_path or 'None'}\n"
-)
+        f"Current stage: {st.current_stage}\n"
+        f"Current run_dir: {st.current_run_dir}\n"
+        f"Latest summary:\n{st.latest_summary or 'None'}\n"
+        f"Latest plot path: {st.latest_plot_path or 'None'}\n"
+    )
 
     input_msgs = [
-    {
-        "role": "developer",
-        "content": SYSTEM_PROMPT,
-    },
-    {
-        "role": "system",
-        "content": context_text,
-    },
+        {
+            "role": "system",
+            "content": SYSTEM_PROMPT + "\n\n" + context_text,
+        },
     ] + to_llm_messages(chat_history)
 
 
     # 4) Initial model call
-    response = CLIENT.responses.create(
+    response = CLIENT.chat.completions.create(
         model=MODEL,
-        input=input_msgs,
+        messages=input_msgs,
         tools=TOOLS,
     )
 
@@ -473,19 +497,35 @@ def run_agent_once(
     loops = 0
     while loops < max_loops:
         loops += 1
-        function_calls = [item for item in response.output if item.type == "function_call"]
-        if not function_calls:
+
+        tool_calls = response.choices[0].message.tool_calls
+        if not tool_calls:
             break
 
-        tool_outputs = []
-        for fc in function_calls:
+        input_msgs.append({
+            "role": "assistant",
+            "content": response.choices[0].message.content or "",
+            "tool_calls": [
+                {
+                    "id": tc.id,
+                    "type": "function",
+                    "function": {
+                        "name": tc.function.name,
+                        "arguments": tc.function.arguments,
+                    }
+                }
+                for tc in tool_calls
+            ]
+        })
+
+        for tc in tool_calls:
             try:
-                args = json.loads(fc.arguments or "{}")
+                args = json.loads(tc.function.arguments or "{}")
             except Exception:
                 args = {}
 
             try:
-                result = execute_tool(st, fc.name, args)
+                result = execute_tool(st, tc.function.name, args)
                 output = json.dumps(result, ensure_ascii=False, default=str)
             except Exception as e:
                 output = json.dumps(
@@ -493,22 +533,20 @@ def run_agent_once(
                     ensure_ascii=False,
                 )
 
-            tool_outputs.append(
-                {
-                    "type": "function_call_output",
-                    "call_id": fc.call_id,
-                    "output": output,
-                }
-            )
+            # Append tool result message
+            input_msgs.append({
+                "role": "tool",
+                "tool_call_id": tc.id,
+                "content": output,
+            })
 
-        response = CLIENT.responses.create(
+        response = CLIENT.chat.completions.create(
             model=MODEL,
-            previous_response_id=response.id,
-            input=tool_outputs,
+            messages=input_msgs,
             tools=TOOLS,
         )
 
-    assistant_text = response.output_text or "Done."
+    assistant_text = response.choices[0].message.content or "Done."
 
     chat_history.append({"role": "assistant", "content": assistant_text})
 

@@ -31,7 +31,7 @@ def remaining_probability_from_data(num_states, num_steps, markov_step, pop_sort
     state_flag = []
     prob_data = []
     for i in range(1,num_states+1):
-        print('Calculating state', i)
+        #print('Calculating state', i)
         lag_flag = []
         prob_state = []
         for k in range(1,num_steps+1): # to get n x Markov
@@ -52,17 +52,18 @@ def remaining_probability_from_data(num_states, num_steps, markov_step, pop_sort
     return state_flag, prob_data
 
 
-def block_average(x, block_size):
+def block_average(x, block_percentage=0.1):
     """
     Calculate uncertainty of remaining probability using block averaging.
     """
+    block_size = int(len(x) * block_percentage)
     block_means = []
-    for i in range(0, len(x)/block_size):
+    for i in range(0, int(len(x)/block_size)):
         block_means.append(np.mean(x[block_size*i:block_size*(i+1)]))         
-    sigma = np.std(block_means)/np.sqrt(len(x)/block_size-1)
+    sigma = np.std(block_means)/np.sqrt(len(block_means))
     return sigma
 
-def get_data_standard_error(num_states, num_steps, state_flag, block_sizes):
+def get_data_standard_error(num_states, num_steps, state_flag, block_percentage):
     """
     Calculate uncertainty of remaining probability for each state at each Markov step.
     """
@@ -70,20 +71,20 @@ def get_data_standard_error(num_states, num_steps, state_flag, block_sizes):
     for i in range(0, num_states):
         error = []
         for j in range(0, num_steps):
-            error.append(block_average(state_flag[i][j], block_sizes[i]))
+            error.append(block_average(state_flag[i][j], block_percentage))
         standard_error.append(error)
     return np.array(standard_error) # [num_states, num_steps]
 
-def get_model_standard_error(num_states, num_steps, clustred_trajs, mdl, n_samples: int = 100):
+def get_model_standard_error(num_states, num_steps, clustred_trajs, mdl, n_samples: int = 20):
     """
     Calculate uncertainty of remaining probability from bootstrapped Markov State Model.
     total_states, tprob, pop_sort
     """
     bmsm = BootStrapMarkovStateModel(n_samples=n_samples, 
-                                     msm_args={"lag_time":mdl.lag_time_,
-                                               "n_timescales":mdl.n_timescales_,
-                                               "reversible_type":mdl.reversible_type_,
-                                               "ergodic_cutoff":mdl.ergodic_cutoff_,
+                                     msm_args={"lag_time":mdl.lag_time,
+                                               "n_timescales":mdl.n_timescales,
+                                               "reversible_type":mdl.reversible_type,
+                                               "ergodic_cutoff":mdl.ergodic_cutoff,
                                                }, save_all_models=True)
     bmsm.fit(clustred_trajs)
     b_remaining_p = []
@@ -105,7 +106,6 @@ def plot_ck_test(num_states, num_steps, prob_data, standard_error, prob_model, o
     for i in range(1, num_states+1):
         position.append(int(str(num_states)+'1'+str(i)))
     cl1, cl2 = 'blue', 'magenta'
-        
     for i in range(0, num_states):
         plt.subplot(position[i])
         plt.plot(lag, prob_data[i], c=cl1, label='From Data', lw=2.5, marker='o', markeredgecolor=cl1, markersize=8)
@@ -115,11 +115,12 @@ def plot_ck_test(num_states, num_steps, prob_data, standard_error, prob_model, o
         plt.xlabel('Number of Markov steps', fontsize = fs)
         plt.ylabel('Probability remaining', fontsize = fs)
         plt.tick_params(axis='both', labelsize=fs)
+        plt.legend(fontsize=fs)
         plt.xlim(0.8, num_steps+0.2)
-        plt.ylim(0.0, 1.0)
+        #plt.ylim(0.0, 1.0)
     plt.tight_layout()
     plt.savefig(outpath, dpi=600)
-    plt.show()
+
 
 def evaluate_ck_pass(predictions, obs_estimates, pred_errors, obs_errors, threshold=1.96):
     """

@@ -5,38 +5,45 @@ run:
 
 data:
   kind: "xtc"
-  dir: "/Users/chloe/Desktop/project/msm/msm_agent/msm_agent/ala2_test_data"
-  topology: "/Users/chloe/Desktop/project/msm/msm_agent/msm_agent/ala2_test_data/ala2.pdb"
-
-  # saving interval of the raw saved trajectory, in ps/frame.
-  # Your filenames suggest 1ps. If that's true, keep 1.0.
-  saving_interval: 1.0
-
-  # mdtraj stride when loading; effective dt = saving_interval * stride
+  dir: "../ala2_test_data"
+  topology: "../ala2_test_data/ala2.pdb"
+  saving_interval: 1
   stride: 1
 
-  # optional: if you already computed features elsewhere and saved as .npy with same stems
-  load_preprocessed_dir: null
-
 features:
-  # Must match stages.py: "angle" or "distance"
-  type: "angle"
-
-  # Must match stages.py: list for angle features
-  selection: ["phi", "psi"]
-
-  # Optional: CA/BACKBONE/HEAVY or mdtraj selection string
-  atom_selection: "BACKBONE"
+  type: "distance"
+  selection: "distances"
+  atom_selection: "HEAVY"
 
 tica:
-  # stages.py uses lag_time_frames_range for sweep + n_components
   lag_time_frames_range: [1, 50]
   n_components: 4
+  lag_time_frames_grid_size: 20
+
+microMSM:
+  lag_time_frames_range: [1, 20]
+  lag_time_frames_grid_size: 20
+  n_timescales: 5
+  reversible_type: transpose
+  ergodic_cutoff: 0.0
+
+macroMSM:
+  n_macrostates: 4
+  lump_method: PCCAPlus
+
+clustering:
+  method: KMeans
+  n_clusters: 50
+  tiny_threshold: 10
 
 plots:
   gridsize: 120
 
-gates:
-  plateau_k: 3
-  # (not required by stages.py, but often used later)
+evaluation:
+  plateau_k: null
+  plateau_threshold: 0.1
+  plateau_last_step: 4
   min_occupancy: 10
+  ck_plot_only: False
+  ck_test_steps: 4
+  ck_test_states: 6

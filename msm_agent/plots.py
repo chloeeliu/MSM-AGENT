@@ -20,10 +20,17 @@ def _free_energy_2d(x, y, weights=None, bins=90, eps=1e-12):
     F -= np.nanmin(F[np.isfinite(F)])
     return F.T, xedges, yedges
 
-def plot_free_energy(x, y, weights, outpath, bins=90):
+def plot_free_energy(x, y, weights, mdl, outpath, bins=90, centers=None):
     F, xedges, yedges = _free_energy_2d(x, y, weights=weights, bins=bins)
     plt.figure()
     mesh = plt.pcolormesh(xedges, yedges, F, shading="auto")
+    if centers is not None:
+        plt.scatter(centers[:, 0],
+            centers[:, 1],
+            s=1e4 * mdl.populations_,       # size by population
+            c=mdl.left_eigenvectors_[:, 1], # color by eigenvector
+            cmap="coolwarm",
+            zorder=3) 
     plt.xlabel("tIC 1")
     plt.ylabel("tIC 2")
     plt.colorbar(mesh, label="Free energy (arb.)")
@@ -42,29 +49,18 @@ def plot_occupancy_hist(occupancies, outpath, min_occupancy=10):
     plt.savefig(outpath, dpi=200)
     plt.close()
 
-def plot_its_curve(its: dict, outpath, top_k: int = 3):
+def plot_its_curve(its: dict, outpath, top_k: int = None):
+    top_k = -1 if top_k is None else top_k
     lags = []
     timescales = []
     for key, value in its.items():
         lags.append(float(key))
         timescales.append(np.asarray(value[:top_k], dtype=float))
     plt.figure(figsize=(12,8))
-    plt.semilogy(lags, timescales, marker="o")
+    plt.semilogy(np.array(lags), np.array(timescales), marker="o")
     plt.xlabel("Lag time (ns)")
     plt.ylabel("Implied timescales (ns)")
-    plt.legend()
     plt.tight_layout()
     plt.savefig(outpath, dpi=200)
     plt.close()
 
-def plot_macro_overlay(x, y, weights, centers, macro_labels, outpath, bins=90):
-    F, xedges, yedges = _free_energy_2d(x, y, weights=weights, bins=bins)
-    plt.figure()
-    mesh = plt.pcolormesh(xedges, yedges, F, shading="auto")
-    plt.xlabel("tIC 1")
-    plt.ylabel("tIC 2")
-    plt.colorbar(mesh, label="Free energy (arb.)")
-    plt.scatter(centers[:,0], centers[:,1], c=macro_labels, s=40, cmap="tab10", zorder=3)
-    plt.tight_layout()
-    plt.savefig(outpath, dpi=200)
-    plt.close()
